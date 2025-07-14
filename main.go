@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
-	"os"
 )
 
 func main() {
@@ -26,20 +24,17 @@ func main() {
 
 	defer conn.Close()
 
-	// Create infinite loop to read from the connection
 	for {
-		buf := make([]byte, 1024)
-		_, err := conn.Read(buf)
+		resp := NewResp(conn)
+		value, err := resp.Read()
 		if err != nil {
-			if err == io.EOF {
-				fmt.Println("Connection closed by client")
-				break
-			}
-			fmt.Println("Error reading from client:", err.Error())
-			os.Exit(1)
-
+			fmt.Println(err)
+			return
 		}
-		// Ignore request and send back a PONG
+
+		fmt.Println(value)
+
+		// ignore request and send back a PONG
 		conn.Write([]byte("+OK\r\n"))
 	}
 	
