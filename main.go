@@ -9,23 +9,24 @@ func main() {
 	fmt.Println("Listening on port :6379")
 
 	// Initialize a TCP listener on port 6379
-	l, err := net.Listen("tcp", ":6379")
+	listener, err := net.Listen("tcp", ":6379")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Listen for incoming connections
-	conn, err := l.Accept()
+	connection, err := listener.Accept()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	defer conn.Close()
+	defer connection.Close()
 
 	for {
-		resp := NewResp(conn)
+		// Initialize a new RESP parser and read RESP value from connection
+		resp := NewResp(connection)
 		value, err := resp.Read()
 		if err != nil {
 			fmt.Println(err)
@@ -35,7 +36,7 @@ func main() {
 		fmt.Println(value)
 
 		// ignore request and send back a PONG
-		conn.Write([]byte("+OK\r\n"))
+		connection.Write([]byte("+OK\r\n"))
 	}
 	
 }
