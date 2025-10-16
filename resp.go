@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strconv"
-	"fmt"
 )
 
 const (
@@ -17,13 +17,17 @@ const (
 
 // Easier to parse & deserialize RESP values
 type Value struct {
-	typ   string // Determine data type of the value
-	bulk  string // Bulk string value
-	array []Value // Array of RESP values
+	typ   string  // Determine data type of the value
+	str   string
+	bulk  string  
+	array []Value
 }
-
 type Resp struct {
 	reader *bufio.Reader
+}
+
+type Writer struct {
+	writer io.Writer
 }
 
 // Pass buffer from the connection to the RESP parser
@@ -101,6 +105,7 @@ func (r *Resp) readArray() (Value, error) {
 	}
 	return v, nil
 }
+
 // Read bulk RESP value
 func (r *Resp) readBulk() (Value, error) {
 	// Initialize a new Value for the bulk string
@@ -111,13 +116,13 @@ func (r *Resp) readBulk() (Value, error) {
 	if err != nil {
 		return v, err
 	}
-	
+
 	// Handle null bulk string
 	if length == -1 {
 		v.bulk = ""
 		return v, nil
 	}
-	
+
 	bulk := make([]byte, length)
 	// Read the bulk string from the buffer
 	_, err = r.reader.Read(bulk)
@@ -133,3 +138,91 @@ func (r *Resp) readBulk() (Value, error) {
 	return v, nil
 }
 
+// Writing value serializer using Marshal
+func (v Value) Marshal() []byte {
+	switch v.typ {
+	case "array":
+		return v.marshalArray()
+	case "bulk":
+		return v.marshalBulk()
+	case "string":
+		return v.marshalString()
+	case "error":
+		return v.marshalError()
+	case "null":
+		return v.marshalNull()
+	default:
+		return []byte{}
+	}
+}
+
+/*
+* Marshall for simple strings
+*/
+func (v Value) marshalString() []byte {
+	var bytes []byte
+	bytes = append(bytes, STRING)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')	
+	return bytes
+}
+
+/*
+* Marshall for Bulk String
+*/
+func (v Value) marshalBulk() []byte {
+	var bytes []byte
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, []byte(strconv.Itoa(len(v.bulk)))...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.bulk...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+/*
+* Marshall for array
+*/
+func (v Value) marshalArray() []byte {
+	len := len(v.array)
+	var bytes []byte
+	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, []byte(strconv.Itoa(len))...)
+	bytes = append(bytes, '\r', '\n')
+	
+	for idx := 0; idx < len; idx++ {
+		bytes = append(bytes, v.array[idx].Marshal()...)
+	}
+	
+	return bytes
+}
+
+/*
+* Marshall for Null and Error
+*/
+
+func (v Value) marshalError() []byte {
+	var bytes []byte
+	bytes = append(bytes, ERROR)
+	bytes = append(bytes, []byte(v.str)...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v Value) marshalNull() []byte {
+	return []byte("$-1\r\n")
+}
+
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{writer: w}
+}
+
+func (w *Writer) Write(v Value) error {
+	var bytes = v.Marshal()
+
+	_, err := w.writer.Write(bytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
