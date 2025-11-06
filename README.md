@@ -66,13 +66,29 @@ Example responses (server → client):
 ## 🧪 Testing with redis-cli
 
 - Start the server:
-  - `go run main.go`
+  - `go run .`
 - In another terminal, connect with `redis-cli`:
   - `redis-cli -h 127.0.0.1 -p 6379`
-- Try a few commands (this server currently replies `+OK` to any input):
+- Try a few commands:
   - `PING` → `OK`
   - `SET mykey hello` → `OK`
-  - `GET mykey` → `OK` (placeholder response; command handling is not implemented yet)
+  - `GET mykey` → `hello`
 
 Notes:
 - If `redis-cli` is not installed, on macOS you can `brew install redis` (provides `redis-cli`). On Linux, install the `redis-tools`/`redis` package for your distro.
+
+## 🔒 Go RWMutex: Lock vs RLock
+
+- Purpose
+  - `Lock`: Exclusive/write lock for mutating shared state; only one holder, blocks readers and writers.
+  - `RLock`: Shared/read lock for read-only access; multiple readers can hold it concurrently.
+
+- Concurrency
+  - `RLock` allows many concurrent readers. Reads block if a writer holds the lock or is waiting.
+  - `Lock` excludes both readers and writers and waits until all readers exit before acquiring.
+  - Go’s `RWMutex` prevents writer starvation by blocking new readers once a writer is waiting.
+
+- When To Use
+  - Use `RLock` for read-heavy, non-mutating code paths that can safely run in parallel.
+  - Use `Lock` for any mutation or when you require exclusive access for a consistent read.
+  - Avoid attempting to upgrade an `RLock` to `Lock` while holding it; design lock acquisition order up front.
