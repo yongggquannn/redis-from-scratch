@@ -39,11 +39,29 @@ Example responses (server → client):
 - Null Bulk: `$-1\r\n` (e.g., GET on a missing key)
 - Error: `-ERR unknown command\r\n`
 
-Implementation notes:
-- The parser reads the first byte to dispatch by type and then parses lengths and payloads as needed.
-- Arrays are recursive: each array element is itself a RESP value.
-- Bulk strings read an integer length, then that many bytes plus trailing CRLF; see.
-- Serialization is centralized in `Value.Marshal()` which delegates per type.
+### RESP Deserialization (Reader)
+- Entry point: A `Resp` wraps a `bufio.Reader` over the TCP connection. `Read()` consumes one RESP value from the stream.
+- Type dispatch: `Read()` reads the first byte to determine the type and then delegates:
+  - `*` → `readArray()`
+  - `$` → `readBulk()`
+  - Other types are currently not handled on the read path and return an error.
+- Reading lines and integers:
+  - `readLine()` reads until `\n`, trims the trailing CRLF (`\r\n`) when present, and returns the line bytes.
+  - `readInt()` calls `readLine()` and parses the result as a base-10 integer. It is used for array sizes and bulk string lengths.
+- Bulk Strings (`$`):
+  - Read length with `readInt()`.
+  - Length `-1` represents a Null Bulk; the code returns an empty `bulk` value for this case.
+  - Otherwise, read exactly `length` bytes for the payload, then consume the trailing CRLF by doing another `readLine()`.
+- Arrays (`*`):
+  - Read element count with `readInt()`.
+  - Allocate that many slots and, for each element, recursively call `Read()` to parse nested values (arrays can contain arrays/bulk strings).
+- Value representation: Parsed values are returned as a `Value` with `typ` set to `"array"` or `"bulk"`. Arrays carry a slice of `Value`; bulk strings carry their data in `bulk`.
+
+### RESP Serialization (Writer)
+- `Value.Marshal()` switches on `typ` and defers to the appropriate marshaller for `array`, `bulk`, `string`, `error`, and `null`.
+- Arrays: `*<len>\r\n` followed by each element’s serialized bytes.
+- Bulk Strings: `$<len>\r\n<data>\r\n`.
+- Simple Strings: `+<text>\r\n`. Errors: `-<message>\r\n`. Null Bulk: `$-1\r\n`.
 
 ## 🧪 Testing with redis-cli
 

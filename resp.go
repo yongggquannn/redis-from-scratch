@@ -65,7 +65,7 @@ func (r *Resp) readInt() (x int, n int, err error) {
 	return int(i64), n, nil
 }
 
-// Generic function to read RESP values
+// TODO: Handle string, error and integer data types
 func (r *Resp) Read() (Value, error) {
 	// Read the first byte to determine the type of RESP value
 	_type, err := r.reader.ReadByte()
