@@ -1,0 +1,9 @@
+services:
+  redis-in-go:
+    build: .
+    image: redis-in-go:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data:/app
+    restart: unless-stopped
