@@ -128,3 +128,10 @@ Notes:
   - Use `RLock` for read-heavy, non-mutating code paths that can safely run in parallel.
   - Use `Lock` for any mutation or when you require exclusive access for a consistent read.
   - Avoid attempting to upgrade an `RLock` to `Lock` while holding it; design lock acquisition order up front.
+
+## 💾 AOF Sync Strategy
+
+- Background sync goroutine: The AOF layer runs a goroutine that calls `file.Sync()` periodically (every 1s) to flush kernel buffers to disk and improve durability over time.
+- Alternative (per-command sync): We could call `Sync()` after every write command for stronger durability guarantees, but this significantly degrades write performance because disk I/O is expensive.
+- Trade-off: Periodic sync offers better throughput with a small risk window (up to the sync interval) of data loss on crash; per-command sync reduces that window at the cost of latency.
+- Coordination: A mutex guards AOF operations so syncing does not race with concurrent writers.
