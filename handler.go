@@ -91,7 +91,7 @@ func hget(args []Value) Value {
 
 	HSETsMu.RLock()
 	val, ok := HSETs[hash][key]
-	SETsMu.RUnlock()
+	HSETsMu.RUnlock()
 
 	if !ok {
 		return Value{typ: "null"}
