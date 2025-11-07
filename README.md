@@ -32,3 +32,13 @@ Notes:
 - Only mutating commands (SET, HSET) are appended to AOF. On startup, the server replays AOF to restore state.
 - If `redis-cli` is not installed, on macOS: `brew install redis`; on Linux, install your distro’s `redis`/`redis-tools`.
 
+## Docker Setup
+
+- Docker Compose Commands:
+  - Start: `docker compose up -d`
+  - Stop: `docker compose down`
+
+- Data location
+  - When using the provided Compose file, the AOF file is stored under `./data/database.aof` on your host.
+
+For deeper technical details, see `DETAILS.md`.
