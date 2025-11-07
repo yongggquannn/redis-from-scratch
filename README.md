@@ -70,12 +70,48 @@ Example responses (server → client):
 - In another terminal, connect with `redis-cli`:
   - `redis-cli -h 127.0.0.1 -p 6379`
 - Try a few commands:
-  - `PING` → `OK`
+  - `PING` → `PONG`
+  - `PING hi` → `hi`
   - `SET mykey hello` → `OK`
   - `GET mykey` → `hello`
+  - `HSET myhash field value` → `OK`
+  - `HGET myhash field` → `value`
+  - `HGETALL myhash` → `[field, value, ...]` (array of bulk strings)
 
 Notes:
 - If `redis-cli` is not installed, on macOS you can `brew install redis` (provides `redis-cli`). On Linux, install the `redis-tools`/`redis` package for your distro.
+
+## ✅ Supported Commands and Outputs
+
+- PING [message]
+  - Behavior: Without arguments returns `PONG`. With one argument echoes that message.
+  - RESP: Simple String (`+PONG\r\n`) or `+<message>\r\n`.
+  - redis-cli: `PING` → `PONG`; `PING hi` → `hi`.
+
+- SET key value
+  - Behavior: Stores a string value at key.
+  - RESP: Simple String `+OK\r\n`.
+  - Errors: Wrong arity → `-ERR wrong number of arguments for 'set' command`.
+
+- GET key
+  - Behavior: Returns the string value stored at key.
+  - RESP: Bulk String with value, or Null Bulk (`$-1\r\n`) if missing.
+  - redis-cli: existing → the value; missing → `(nil)`.
+
+- HSET hash field value
+  - Behavior: Sets field in the hash stored at key `hash`.
+  - RESP: Simple String `+OK\r\n`.
+  - Errors: Wrong arity → `-ERR wrong number of arguments for 'hset' command`.
+
+- HGET hash field
+  - Behavior: Returns the value associated with field in the hash `hash`.
+  - RESP: Bulk String value, or Null Bulk if the field or hash does not exist.
+  - redis-cli: existing → the value; missing → `(nil)`.
+
+- HGETALL hash
+  - Behavior: Returns all fields and values in the hash as an array of bulk strings in `[field1, value1, field2, value2, ...]` order.
+  - RESP: Array where each element is a Bulk String. Missing hash → empty array.
+  - Ordering: Field order is unspecified (map iteration order is not deterministic).
 
 ## 🔒 Go RWMutex: Lock vs RLock
 
