@@ -7,3 +7,8 @@ services:
     volumes:
       - ./data:/app
     restart: unless-stopped
+  bench:
+    image: redis:7-alpine
+    depends_on:
+      - redis-in-go
+    entrypoint: ["redis-benchmark"]
